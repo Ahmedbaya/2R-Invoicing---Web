@@ -4,6 +4,7 @@ import { computeTotals, formatNumber } from './calc'
 import { COMPANY } from './company'
 import { frDate } from './format'
 import type { InvoiceRecord } from './types'
+import { paymentLines } from './payment'
 
 const COLS = [
   { label: 'Q.TE', w: '9%', align: 'num' },
@@ -60,6 +61,7 @@ export function invoiceDocument(inv: InvoiceRecord) {
   const t = computeTotals(inv.items)
   const c = inv.client
   const lg = inv.logistics
+  const pay = paymentLines(inv)
   const title = inv.number ? `FACTURE N° ${inv.number} / ${inv.year}` : 'FACTURE (BROUILLON)'
 
   return (
@@ -110,6 +112,13 @@ export function invoiceDocument(inv: InvoiceRecord) {
           </View>
           <Text style={s.words}>ARRÊTÉE LA PRÉSENTE FACTURE À LA SOMME DE : {amountInWordsFr(t.totalAmount)}</Text>
           {inv.vat_note ? <Text>{inv.vat_note}</Text> : null}
+          {pay.length > 0 ? (
+            <View style={{ marginTop: 6 }}>
+              {pay.map(([l, v]) => (
+                <Text key={l}>{l} : <Text style={s.bold}>{v}</Text></Text>
+              ))}
+            </View>
+          ) : null}
           {lg.customs_declaration || lg.transporter || lg.gross_weight_kg || lg.pallets != null ? (
             <View style={s.box}>
               {lg.customs_declaration ? <Text>{lg.customs_declaration}</Text> : null}

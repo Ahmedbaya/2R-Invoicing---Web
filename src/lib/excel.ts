@@ -4,6 +4,7 @@ import { computeTotals, dec, formatNumber } from './calc'
 import { COMPANY } from './company'
 import { frDate, todayIso } from './format'
 import type { InvoiceListRow, InvoiceRecord } from './types'
+import { paymentLines } from './payment'
 
 const thin = { style: 'thin' as const }
 const border = { top: thin, left: thin, bottom: thin, right: thin }
@@ -82,6 +83,11 @@ export function invoiceWorkbook(inv: InvoiceRecord): ExcelJS.Workbook {
   }
   block(`ARRÊTÉE LA PRÉSENTE FACTURE À LA SOMME DE : ${amountInWordsFr(t.totalAmount)}`, 32, true)
   if (inv.vat_note) block(inv.vat_note)
+  const pay = paymentLines(inv)
+  if (pay.length) {
+    row++
+    for (const [l, v] of pay) block(`${l} : ${v}`)
+  }
   const lg = inv.logistics
   row++
   if (lg.customs_declaration) block(lg.customs_declaration)
