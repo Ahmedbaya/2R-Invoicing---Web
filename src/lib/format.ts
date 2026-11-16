@@ -6,3 +6,4 @@ export const invoiceLabel = (i: { number: number | null; year: number | null }, 
   i.number ? `${i.number} / ${i.year}` : draft
 export const fileBase = (i: Pick<InvoiceRecord, 'id' | 'number' | 'year'>) =>
   i.number ? `FACTURE_${i.number}-${i.year}` : `BROUILLON_${i.id}`
+export const todayIso = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Tunis' })

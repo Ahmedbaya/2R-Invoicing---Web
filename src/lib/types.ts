@@ -25,6 +25,9 @@ export interface InvoiceListRow {
   currency: string
   total_amount: string
   total_quantity: string
+  payment_due_date: string | null
+  payment_status: 'unpaid' | 'paid'
+  paid_date: string | null
   client_name: string | null
 }
 export interface InvoiceItem {
@@ -56,6 +59,9 @@ export interface InvoiceRecord {
   }
   total_amount: string
   total_quantity: string
+    payment_due_date: string | null
+  payment_status: 'unpaid' | 'paid'
+  paid_date: string | null
 }
 export interface DashboardStats {
   year: number
@@ -69,4 +75,8 @@ export interface DashboardStats {
   by_category: { customs_code: string; name: string | null; total: string }[]
   top_clients: { client_id: number | null; name: string; total: string; count: number }[]
   recent: InvoiceListRow[]
+    unpaid_amount: string
+  unpaid_count: number
+  overdue_amount: string
+  overdue_count: number
 }

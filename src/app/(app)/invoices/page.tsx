@@ -4,6 +4,7 @@ import { frDate, invoiceLabel } from '@/lib/format'
 import { getI18n } from '@/lib/i18n-server'
 import { listClients, listInvoices, listYears } from '@/lib/queries'
 import StatusBadge from '@/components/StatusBadge'
+import PaymentBadge from '@/components/PaymentBadge'
 
 type SP = Record<string, string | string[] | undefined>
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)
@@ -11,7 +12,7 @@ const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)
 export default async function InvoicesPage({ searchParams }: { searchParams: Promise<SP> }) {
   const { t } = await getI18n()
   const sp = await searchParams
-  const filters = { q: one(sp.q), year: one(sp.year), client: one(sp.client), status: one(sp.status) }
+  const filters = { q: one(sp.q), year: one(sp.year), client: one(sp.client), status: one(sp.status), pay: one(sp.pay) }
   const [rows, years, clients] = await Promise.all([listInvoices(filters), listYears(), listClients()])
 
   const byCurrency: Record<string, string> = {}
@@ -36,6 +37,12 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
           <option value="finalized">{t('status.finalized')}</option>
           <option value="draft">{t('status.draft')}</option>
         </select>
+                <select name="pay" defaultValue={filters.pay ?? ''} className="rounded border border-rule bg-white px-2 py-1.5 text-sm">
+          <option value="">{t('pay.all')}</option>
+          <option value="unpaid">{t('pay.unpaid')}</option>
+          <option value="overdue">{t('pay.overdue')}</option>
+          <option value="paid">{t('pay.paid')}</option>
+        </select>
         <select name="year" defaultValue={filters.year ?? ''} className="rounded border border-rule bg-white px-2 py-1.5 text-sm">
           <option value="">{t('inv.allYears')}</option>
           {years.map((y) => <option key={y} value={y}>{y}</option>)}
@@ -57,7 +64,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
               <thead className="bg-mist text-left">
                 <tr>
                   <th className="p-2">{t('col.number')}</th><th className="p-2">{t('col.client')}</th><th className="p-2">{t('col.date')}</th>
-                  <th className="p-2 text-right">{t('col.total')}</th><th className="p-2">{t('col.status')}</th><th className="p-2" />
+                  <th className="p-2 text-right">{t('col.total')}</th><th className="p-2">{t('col.status')}</th><th className="p-2">{t('pay.column')}</th><th className="p-2" />
                 </tr>
               </thead>
               <tbody>
@@ -68,6 +75,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
                     <td className="p-2">{frDate(r.issue_date)}</td>
                     <td className="p-2 text-right tabular-nums">{formatNumber(r.total_amount, 2)} {r.currency}</td>
                     <td className="p-2"><StatusBadge status={r.status} hasNumber={r.number !== null} /></td>
+                    <td className="p-2"><PaymentBadge finalized={r.status === 'finalized'} status={r.payment_status} due={r.payment_due_date} paid={r.paid_date} /></td>
                     <td className="space-x-3 p-2 text-right whitespace-nowrap">
                       <a className="text-accent underline" href={`/api/invoices/${r.id}/pdf`}>{t('inv.pdf')}</a>
                       <a className="text-accent underline" href={`/api/invoices/${r.id}/excel`}>{t('inv.excel')}</a>

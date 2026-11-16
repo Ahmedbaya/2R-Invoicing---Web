@@ -6,6 +6,7 @@ import { frDate, invoiceLabel } from '@/lib/format'
 import { getI18n } from '@/lib/i18n-server'
 import { getInvoice } from '@/lib/queries'
 import StatusBadge from '@/components/StatusBadge'
+import PaymentBadge from '@/components/PaymentBadge'
 
 export default async function InvoicePage({ params }: { params: Promise<{ id: string }> }) {
   const { t } = await getI18n()
@@ -76,6 +77,16 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
         <p className="pt-1 font-medium">{amountInWordsFr(totals.totalAmount)}</p>
         {inv.vat_note && <p>{inv.vat_note}</p>}
       </section>
+            {(inv.status === 'finalized' || inv.payment_due_date) && (
+        <section className="mt-4 rounded border border-rule bg-white p-4 text-sm">
+          <h2 className="mb-2 font-semibold">{t('det.payment')}</h2>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <PaymentBadge finalized={inv.status === 'finalized'} status={inv.payment_status} due={inv.payment_due_date} paid={inv.paid_date} />
+            <span>{t('det.dueDate')}: {inv.payment_due_date ? frDate(inv.payment_due_date) : t('det.notSet')}</span>
+            {inv.payment_status === 'paid' && inv.paid_date && <span>{t('det.paidDate')}: {frDate(inv.paid_date)}</span>}
+          </div>
+        </section>
+      )}
 
       {(lg.customs_declaration || lg.transporter || lg.gross_weight_kg || lg.pallets !== null) && (
         <section className="mt-4 rounded border border-rule bg-white p-4 text-sm leading-6">

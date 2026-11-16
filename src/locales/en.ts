@@ -111,6 +111,20 @@ export const en = {
   'ca.customs': 'Customs code',
   'ca.products': 'Products',
   'ca.empty': 'No categories yet.',
+    'pay.column': 'Payment',
+  'pay.all': 'All payments',
+  'pay.paid': 'Paid',
+  'pay.unpaid': 'Unpaid',
+  'pay.overdue': 'Overdue',
+  'pay.paidOn': 'Paid on {date}',
+  'pay.unpaidDue': 'Unpaid · due {date}',
+  'pay.overdueSince': 'Overdue · due {date}',
+  'det.payment': 'Payment',
+  'det.dueDate': 'Due date',
+  'det.paidDate': 'Date of payment',
+  'det.notSet': 'Not set',
+  'dash.unpaid': 'Unpaid invoices',
+  'dash.overdue': 'Overdue',
 }
 
 export type Key = keyof typeof en

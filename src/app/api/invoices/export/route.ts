@@ -7,7 +7,13 @@ export const dynamic = 'force-dynamic'
 export async function GET(req: Request) {
   const sp = new URL(req.url).searchParams
   const rows = await listInvoices(
-    { q: sp.get('q') ?? undefined, year: sp.get('year') ?? undefined, client: sp.get('client') ?? undefined, status: sp.get('status') ?? undefined },
+    {
+      q: sp.get('q') ?? undefined,
+      year: sp.get('year') ?? undefined,
+      client: sp.get('client') ?? undefined,
+      status: sp.get('status') ?? undefined,
+      pay: sp.get('pay') ?? undefined,
+    },
     5000,
   )
   if (rows.length === 0) return new Response('No invoices to export', { status: 404 })

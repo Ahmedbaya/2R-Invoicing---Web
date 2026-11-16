@@ -37,6 +37,7 @@ export default async function DashboardPage() {
   const months = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleDateString(locale, { month: 'short' }))
   const yearTotal = Number(s.revenue_year)
   const maxCat = Math.max(...s.by_category.map((c) => Number(c.total)), 1)
+    const countLabel = (n: number) => (n === 1 ? t('inv.countOne') : t('inv.countMany', { n }))
 
   const trend = (cur: string, prev: string) => {
     const c = Number(cur)
@@ -78,7 +79,11 @@ export default async function DashboardPage() {
             warn={s.drafts > 0}
           />
         </div>
-
+        
+                <div className="grid grid-cols-2 gap-4">
+          <Card label={t('dash.unpaid')} value={eur(s.unpaid_amount)} hint={countLabel(s.unpaid_count)} href="/invoices?pay=unpaid" />
+          <Card label={t('dash.overdue')} value={eur(s.overdue_amount)} hint={countLabel(s.overdue_count)} href="/invoices?pay=overdue" warn={s.overdue_count > 0} />
+        </div>
         <div className="grid gap-4 lg:grid-cols-3">
           <Panel title={t('dash.monthly', { year: s.year })} className="lg:col-span-2">
             {yearTotal === 0

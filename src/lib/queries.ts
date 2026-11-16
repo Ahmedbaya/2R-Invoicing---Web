@@ -5,7 +5,7 @@ import type { Category, Client, DashboardStats, InvoiceListRow, InvoiceRecord, P
 
 const escapeLike = (s: string) => s.replace(/[\\%_]/g, '\\$&')
 
-export interface InvoiceFilters { q?: string; year?: string; client?: string; status?: string }
+export interface InvoiceFilters { q?: string; year?: string; client?: string; status?: string; pay?: string }
 
 export async function listInvoices(f: InvoiceFilters, limit = 500): Promise<InvoiceListRow[]> {
   await requireAuth()
@@ -13,8 +13,10 @@ export async function listInvoices(f: InvoiceFilters, limit = 500): Promise<Invo
   const year = /^\d{4}$/.test(f.year ?? '') ? Number(f.year) : null
   const client = /^\d+$/.test(f.client ?? '') ? Number(f.client) : null
   const status = f.status === 'draft' || f.status === 'finalized' ? f.status : null
+  const pay = f.pay === 'paid' || f.pay === 'unpaid' || f.pay === 'overdue' ? f.pay : null
   const { rows } = await pool.query(
     `SELECT i.id, i.status, i.number, i.year, i.issue_date, i.currency, i.total_amount, i.total_quantity,
+            i.payment_due_date, i.payment_status, i.paid_date,
             COALESCE(i.client_snapshot->>'company_name', c.company_name) AS client_name
        FROM invoices i LEFT JOIN clients c ON c.id = i.client_id
       WHERE ($1::int IS NULL OR EXTRACT(YEAR FROM i.issue_date)::int = $1::int)
@@ -27,13 +29,18 @@ export async function listInvoices(f: InvoiceFilters, limit = 500): Promise<Invo
              OR EXISTS (SELECT 1 FROM invoice_items ii
                          WHERE ii.invoice_id = i.id
                            AND concat_ws(' ', ii.item_code, ii.order_name, ii.description) ILIKE $4::text))
+        AND ($5::text IS NULL
+             OR (i.status = 'finalized' AND (
+                  ($5::text = 'paid' AND i.payment_status = 'paid')
+               OR ($5::text = 'unpaid' AND i.payment_status = 'unpaid')
+               OR ($5::text = 'overdue' AND i.payment_status = 'unpaid'
+                   AND i.payment_due_date < (now() AT TIME ZONE 'Africa/Tunis')::date))))
       ORDER BY i.issue_date DESC, i.id DESC
       LIMIT ${Number(limit)}`,
-    [year, client, status, q],
+    [year, client, status, q, pay],
   )
   return rows
 }
-
 export async function listYears(): Promise<number[]> {
   await requireAuth()
   const { rows } = await pool.query('SELECT DISTINCT EXTRACT(YEAR FROM issue_date)::int AS y FROM invoices ORDER BY y DESC')
@@ -105,6 +112,9 @@ export async function getInvoice(id: number): Promise<InvoiceRecord | null> {
     },
     total_amount: r.total_amount,
     total_quantity: clean(r.total_quantity),
+    payment_due_date: r.payment_due_date,
+    payment_status: r.payment_status,
+    paid_date: r.paid_date,
   }
 }
 const inYear = (c: string) =>
@@ -116,7 +126,7 @@ const inPrevMonth = (c: string) =>
 
 export async function getDashboardStats(): Promise<DashboardStats> {
   await requireAuth()
-  const [totals, drafts, monthly, byCategory, topClients, categories, recent] = await Promise.all([
+  const [totals, drafts, monthly, byCategory, topClients, categories, recent, payments] = await Promise.all([
     pool.query(`
       SELECT
         EXTRACT(YEAR FROM CURRENT_DATE)::int AS year,
@@ -144,6 +154,15 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       ORDER BY SUM(i.total_amount) DESC LIMIT 5`),
     pool.query('SELECT customs_code, name FROM categories ORDER BY id'),
     listInvoices({}, 8),
+    pool.query(`
+      SELECT
+        COALESCE(SUM(total_amount) FILTER (WHERE payment_status = 'unpaid'), 0) AS unpaid_amount,
+        (count(*) FILTER (WHERE payment_status = 'unpaid'))::int AS unpaid_count,
+        COALESCE(SUM(total_amount) FILTER (WHERE payment_status = 'unpaid'
+                  AND payment_due_date < (now() AT TIME ZONE 'Africa/Tunis')::date), 0) AS overdue_amount,
+        (count(*) FILTER (WHERE payment_status = 'unpaid'
+                  AND payment_due_date < (now() AT TIME ZONE 'Africa/Tunis')::date))::int AS overdue_count
+      FROM invoices WHERE status = 'finalized' AND currency = 'EUR'`),
   ])
 
   const t = totals.rows[0]
@@ -164,5 +183,9 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     by_category: byCategory.rows.map((r) => ({ customs_code: r.customs_code, name: names.get(r.customs_code) ?? null, total: String(r.total) })),
     top_clients: topClients.rows.map((r) => ({ client_id: r.client_id, name: r.name, total: String(r.total), count: r.count })),
     recent,
+        unpaid_amount: String(payments.rows[0].unpaid_amount),
+    unpaid_count: payments.rows[0].unpaid_count,
+    overdue_amount: String(payments.rows[0].overdue_amount),
+    overdue_count: payments.rows[0].overdue_count,
   }
 }

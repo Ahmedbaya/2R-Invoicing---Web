@@ -2,7 +2,7 @@ import ExcelJS from 'exceljs'
 import { amountInWordsFr } from './amountInWords'
 import { computeTotals, dec, formatNumber } from './calc'
 import { COMPANY } from './company'
-import { frDate } from './format'
+import { frDate, todayIso } from './format'
 import type { InvoiceListRow, InvoiceRecord } from './types'
 
 const thin = { style: 'thin' as const }
@@ -105,25 +105,37 @@ export function listWorkbook(rows: InvoiceListRow[]): ExcelJS.Workbook {
     { header: 'DEVISE', key: 'currency', width: 9 },
     { header: 'QUANTITÉ', key: 'qty', width: 12 },
     { header: 'TOTAL', key: 'total', width: 15 },
+    { header: 'ÉCHÉANCE', key: 'due', width: 13 },
+    { header: 'PAIEMENT', key: 'pay', width: 14 },
+    { header: 'DATE PAIEMENT', key: 'paid', width: 15 },
   ]
+  const today = todayIso()
+  const asDate = (iso: string | null) => (iso ? new Date(`${iso}T00:00:00Z`) : null)
   for (const r of rows) {
+    const finalized = r.status === 'finalized'
+    const overdue = finalized && r.payment_status === 'unpaid' && !!r.payment_due_date && r.payment_due_date < today
     ws.addRow({
       number: r.number ? `${r.number} / ${r.year}` : 'Brouillon',
       client: r.client_name ?? '',
-      date: new Date(`${r.issue_date}T00:00:00Z`),
+      date: asDate(r.issue_date),
       status: r.status === 'finalized' ? 'Finalisée' : r.number ? 'En modification' : 'Brouillon',
       currency: r.currency,
       qty: num(r.total_quantity),
       total: num(r.total_amount),
+      due: asDate(r.payment_due_date),
+      pay: !finalized ? '' : r.payment_status === 'paid' ? 'Payée' : overdue ? 'En retard' : 'Impayée',
+      paid: asDate(r.paid_date),
     })
   }
   ws.getColumn('date').numFmt = 'dd/mm/yyyy'
+  ws.getColumn('due').numFmt = 'dd/mm/yyyy'
+  ws.getColumn('paid').numFmt = 'dd/mm/yyyy'
   ws.getColumn('total').numFmt = '#,##0.00'
   const head = ws.getRow(1)
   head.font = { bold: true }
   head.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEEEEE' } }
   ws.views = [{ state: 'frozen', ySplit: 1 }]
-  ws.autoFilter = { from: 'A1', to: `G${rows.length + 1}` }
+  ws.autoFilter = { from: 'A1', to: `J${rows.length + 1}` }
 
   // A single total only makes sense when every invoice uses the same currency.
   if (new Set(rows.map((r) => r.currency)).size === 1) {
