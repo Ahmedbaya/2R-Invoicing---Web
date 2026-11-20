@@ -10,6 +10,7 @@ export async function GET(req: Request) {
     {
       q: sp.get('q') ?? undefined,
       year: sp.get('year') ?? undefined,
+      month: sp.get('month') ?? undefined,
       client: sp.get('client') ?? undefined,
       status: sp.get('status') ?? undefined,
       pay: sp.get('pay') ?? undefined,

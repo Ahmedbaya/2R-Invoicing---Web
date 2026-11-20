@@ -10,9 +10,13 @@ type SP = Record<string, string | string[] | undefined>
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)
 
 export default async function InvoicesPage({ searchParams }: { searchParams: Promise<SP> }) {
-  const { t } = await getI18n()
+  const { t, locale } = await getI18n()
   const sp = await searchParams
-  const filters = { q: one(sp.q), year: one(sp.year), client: one(sp.client), status: one(sp.status), pay: one(sp.pay) }
+  const filters = { q: one(sp.q), year: one(sp.year), month: one(sp.month), client: one(sp.client), status: one(sp.status), pay: one(sp.pay) }
+  const months = Array.from({ length: 12 }, (_, i) => {
+    const n = new Date(2000, i, 1).toLocaleDateString(locale, { month: 'long' })
+    return { value: String(i + 1), label: n.charAt(0).toUpperCase() + n.slice(1) }
+  })
   const [rows, years, clients] = await Promise.all([listInvoices(filters), listYears(), listClients()])
 
   const byCurrency: Record<string, string> = {}
@@ -46,6 +50,10 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
         <select name="year" defaultValue={filters.year ?? ''} className="rounded border border-rule bg-white px-2 py-1.5 text-sm">
           <option value="">{t('inv.allYears')}</option>
           {years.map((y) => <option key={y} value={y}>{y}</option>)}
+        </select>
+                <select name="month" defaultValue={filters.month ?? ''} aria-label={t('inv.allMonths')} className="rounded border border-rule bg-white px-2 py-1.5 text-sm">
+          <option value="">{t('inv.allMonths')}</option>
+          {months.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
         </select>
         <select name="client" defaultValue={filters.client ?? ''} className="max-w-56 rounded border border-rule bg-white px-2 py-1.5 text-sm">
           <option value="">{t('inv.allClients')}</option>

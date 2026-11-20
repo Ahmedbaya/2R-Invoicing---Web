@@ -125,6 +125,7 @@ export const en = {
   'det.notSet': 'Not set',
   'dash.unpaid': 'Unpaid invoices',
   'dash.overdue': 'Overdue',
+    'inv.allMonths': 'All months',
 }
 
 export type Key = keyof typeof en

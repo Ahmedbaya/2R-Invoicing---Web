@@ -5,12 +5,13 @@ import type { Category, Client, DashboardStats, InvoiceListRow, InvoiceRecord, P
 
 const escapeLike = (s: string) => s.replace(/[\\%_]/g, '\\$&')
 
-export interface InvoiceFilters { q?: string; year?: string; client?: string; status?: string; pay?: string }
+export interface InvoiceFilters { q?: string; year?: string; month?: string; client?: string; status?: string; pay?: string }
 
 export async function listInvoices(f: InvoiceFilters, limit = 500): Promise<InvoiceListRow[]> {
   await requireAuth()
   const q = f.q?.trim() ? `%${escapeLike(f.q.trim())}%` : null
   const year = /^\d{4}$/.test(f.year ?? '') ? Number(f.year) : null
+    const month = /^(0?[1-9]|1[0-2])$/.test(f.month ?? '') ? Number(f.month) : null
   const client = /^\d+$/.test(f.client ?? '') ? Number(f.client) : null
   const status = f.status === 'draft' || f.status === 'finalized' ? f.status : null
   const pay = f.pay === 'paid' || f.pay === 'unpaid' || f.pay === 'overdue' ? f.pay : null
@@ -20,6 +21,7 @@ export async function listInvoices(f: InvoiceFilters, limit = 500): Promise<Invo
             COALESCE(i.client_snapshot->>'company_name', c.company_name) AS client_name
        FROM invoices i LEFT JOIN clients c ON c.id = i.client_id
       WHERE ($1::int IS NULL OR EXTRACT(YEAR FROM i.issue_date)::int = $1::int)
+        AND ($6::int IS NULL OR EXTRACT(MONTH FROM i.issue_date)::int = $6::int)
         AND ($2::int IS NULL OR i.client_id = $2::int)
         AND ($3::text IS NULL OR i.status = $3::text)
         AND ($4::text IS NULL
@@ -37,7 +39,7 @@ export async function listInvoices(f: InvoiceFilters, limit = 500): Promise<Invo
                    AND i.payment_due_date < (now() AT TIME ZONE 'Africa/Tunis')::date))))
       ORDER BY i.issue_date DESC, i.id DESC
       LIMIT ${Number(limit)}`,
-    [year, client, status, q, pay],
+    [year, client, status, q, pay, month],
   )
   return rows
 }

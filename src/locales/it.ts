@@ -127,4 +127,5 @@ export const it: Record<Key, string> = {
   'det.notSet': 'Non indicata',
   'dash.unpaid': 'Fatture non pagate',
   'dash.overdue': 'Scadute',
+    'inv.allMonths': 'Tutti i mesi',
 }
